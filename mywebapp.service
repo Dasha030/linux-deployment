@@ -1,0 +1,18 @@
+[Unit]
+Description=My Web Application (Notes Service)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=app
+WorkingDirectory=/opt/mywebapp
+# Етап ExecStartPre автоматично запускає міграцію перед стартом сервера
+ExecStartPre=/home/dariiat/.nvm/versions/node/v20.20.2/bin/node /opt/mywebapp/migrate.js
+# Основний запуск сервера
+ExecStart=/home/dariiat/.nvm/versions/node/v20.20.2/bin/node /opt/mywebapp/index.js
+Restart=always
+RestartSec=3
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

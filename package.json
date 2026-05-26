@@ -1,0 +1,16 @@
+{
+  "name": "mywebapp",
+  "version": "1.0.0",
+  "description": "Notes Service for Variant 27",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "migrate": "node migrate.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "pg": "^8.11.5"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "port": 3000,
+  "db": {
+    "user": "YOUR_DB_USER",
+    "host": "127.0.0.1",
+    "database": "YOUR_DB_NAME",
+    "password": "YOUR_DB_PASSWORD",
+    "port": 5432
+  }
+}

@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  task-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: my-task-manager-compose
+    ports:
+      - "3030:3000"
+    restart: unless-stopped

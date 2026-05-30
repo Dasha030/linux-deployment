@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: Continuous Integration & Deployment
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     branches: [ main, master ]
 
 jobs:
+  # ЕТАП 1: Лінтер та Тести (CI)
   test-and-lint:
     runs-on: ubuntu-latest
     steps:
@@ -28,6 +29,7 @@ jobs:
       - name: Run automated tests
         run: npm test
 
+  # ЕТАП 2: Збірка образу в GHCR (CI)
   build-image:
     needs: test-and-lint
     runs-on: ubuntu-latest
@@ -38,7 +40,6 @@ jobs:
       - name: Checkout repository code
         uses: actions/checkout@v4
 
-      # Цей крок автоматично переведе назву репозиторію в нижній регістр і створить теги
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -61,5 +62,45 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }} # Використовуємо виправлені маленькі теги
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  # ЕТАП 3: Автоматичний деплой на твій сервер (CD)
+  deploy:
+    needs: build-image
+    runs-on: self-hosted # ВКАЗУЄМО ТВОЙ РАННЕР! Завдання виконається прямо в Ubuntu
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull latest Docker image
+        run: |
+          # Переводимо назву репозиторію в нижній регістр для Docker
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker pull ghcr.io/$REPO_LOWER:latest
+
+      - name: Stop and remove old container if exists
+        run: |
+          docker stop task-manager-cd || true
+          docker rm task-manager-cd || true
+
+      - name: Run new updated container
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          # Запускаємо на порті 3040, щоб не конфліктувати з іншими лабами
+          docker run -d -p 3040:3000 --name task-manager-cd --restart unless-stopped ghcr.io/$REPO_LOWER:latest
+
+      # КРОК ВЕРИФІКАЦІЇ (Health Check) за методичкою викладача
+      - name: Verify deployment status (Health Check)
+        run: |
+          echo "Waiting for app to start..."
+          sleep 5
+          # Робимо запит до нашого контейнера на порт 3040
+          STATUS_CODE=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:3040/)
+          echo "App responded with status code: $STATUS_CODE"
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Deployment Verification Failed!"
+            exit 1
+          fi
+          echo "Deployment Verification Successful! Application is live!"

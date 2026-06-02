@@ -1,0 +1,36 @@
+- name: Force apt update via shell
+  shell: apt update
+
+- name: Install Node.js, Node Package Manager and Nginx
+  apt:
+    name:
+      - nodejs
+      - npm
+      - nginx
+    state: present
+
+- name: Create app directory
+  file:
+    path: /var/www/task-manager
+    state: directory
+    mode: '0755'
+
+- name: Deploy application source code
+  copy:
+    src: "/home/dariiat/lab2/lab-01-task-manager/{{ item }}"
+    dest: /var/www/task-manager/
+    owner: app
+    mode: '0644'
+  loop:
+    - index.js
+    - package.json
+
+- name: Fix application directory ownership
+  file:
+    path: /var/www/task-manager
+    owner: app
+    recurse: yes
+
+- name: Install application packages via npm
+  shell: |
+    cd /var/www/task-manager && sudo -u app npm install

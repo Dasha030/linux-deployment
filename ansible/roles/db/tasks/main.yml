@@ -1,0 +1,34 @@
+- name: Force apt update via shell
+  shell: apt update
+
+- name: Install PostgreSQL server
+  apt:
+    name: postgresql
+    state: present
+
+- name: Configure PostgreSQL to listen on all interfaces
+  lineinfile:
+    path: /etc/postgresql/16/main/postgresql.conf
+    regexp: "^#?listen_addresses ="
+    line: "listen_addresses = '*'"
+
+- name: Allow md5 connections from worker subnet
+  lineinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf
+    line: "host all all 10.136.22.0/24 md5"
+
+- name: Ensure PostgreSQL service is running
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Create database user via psql
+  shell: |
+    sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'kpi_secure_password';"
+    sudo -u postgres psql -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'kpi_user') THEN CREATE USER kpi_user WITH PASSWORD 'kpi_secure_password'; END IF; END \$\$;"
+    sudo -u postgres psql -c "ALTER USER kpi_user WITH SUPERUSER;"
+
+- name: Create lab database via psql
+  shell: |
+    sudo -u postgres psql -c "SELECT 1 FROM pg_database WHERE datname = 'task_manager_db'" | grep -q 1 || sudo -u postgres psql -c "CREATE DATABASE task_manager_db OWNER kpi_user;"
